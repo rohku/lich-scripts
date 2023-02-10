@@ -8,9 +8,12 @@
     author: Tillmen (tillmen@lichproject.org)
       game: Gemstone
       tags: loot
-   version: 0.26
+   version: 0.26a (https://github.com/rohku/lich-scripts/blob/main/loot.lic)
 
-   changelog:
+   changelog
+       0.26a (2023-02-09):
+          Fixed aimed ranged weapon attacks (bow and crossbow) not triggering looting.
+          Initial pass at removing deprecated ammunition tracking and gathering
       0.26 (2018-10-25):
          add get/put messages for vanishing point gowns
       0.25 (2018-08-23):
@@ -20,7 +23,6 @@
 
 =end
 =begin
-
       0.23 (2017-10-08):
          add category of monster that is skinnable by both edged and blunt weapons: use blunt weapons when available
       0.22 (2017-10-01):
@@ -597,30 +599,30 @@ exec_string = "
    while line = get
       if line =~ /<stream id=\"thoughts\">/
          next
-      elsif line =~ /^(?:<.*?>)?You nock an? .*?<a exist=\"(\\-?[0-9]+)\" noun=\"arrow\">/
-         $loot_arrow_ids.push($1) unless $loot_arrow_ids.include?($1)
+#      elsif line =~ /^(?:<.*?>)?You nock an? .*?<a exist=\"(\\-?[0-9]+)\" noun=\"arrow\">/
+#         $loot_arrow_ids.push($1) unless $loot_arrow_ids.include?($1)
       elsif line =~ /^(?:<.*?>)?The scintillating light fades from an .*?<a exist=\"(\\-?[0-9]+)\" noun=\"arrows\">.*?<\\/a>\\./
          $loot_needs_eblade.push($1)
       elsif line =~ /^(?:<.*?>)?The scintillating .*?light surrounding the .*?<a exist=\"(\\-?[0-9]+)\" noun=\"arrow\">.*?<\\/a> fades away\\./
          $loot_needs_eblade.push($1)
-      elsif line =~ /<comp(?:onent|Def) id='room objs'>.*?<a exist=\"(?:\#{$loot_arrow_ids.join('|')})\".*?<\\/comp(?:onent|Def)>/
-         $loot_grab_list = ($loot_grab_list | GameObj.loot.to_a.find_all { |obj| $loot_arrow_ids.include?(obj.id) }.collect { |obj| obj.id }) - $loot_arrow_wait
-      elsif line =~ /^(?:The|Glancing shot.  The|Bad angle.  The|Lacking the force and angle to lodge in .*?, the) <a exist=\"(\\-?[0-9]+)\" noun=\"arrow\">.*?<\\/a> (?:ricochets away from .*?, landing nearby\\.|zips past its target to the ground\\.|flips over, landing behind .*?\\.|fails to stick in .*?\\.|simply falls\\.|is deflected to one side, sailing to the ground\\.|disappears into the local environs|zips past its target to the ground\\.)/
-         arrow_id = $1.dup
-         if $loot_arrow_ids.include?(arrow_id) and not $loot_arrow_wait.include?(arrow_id)
-            $loot_arrow_wait.push(arrow_id)
-            Thread.new {
-               sleep 16
-               arrow_id = $loot_arrow_wait.shift
-               unless $loot_grab_list.include?(arrow_id) or !GameObj.loot.any? { |obj| obj.id == arrow_id }
-                  $loot_grab_list.push(arrow_id)
-               end
-            }
-            if (line =~ /disappears into the local environs/) and (room = Room.current)
-               $loot_search_rooms.push(room.id)
-            end
-         end
-      elsif (line =~ /You (?:swing|gesture|sing|weave another verse|continue to sing|channel|fire|wave|tap|rub|hurl|thrust|slash|throw|punch|attempt to punch|attempt to kick|attempt to throw|quickly dart behind .*? and try to hamstring|mentally attempt to locate your implanted essence|rush forward|exhale a virulent green mist)|You .*?attempt to (?:kick|punch|jab|grapple)|A wave of power flows out of you and toward|Abruptly, you sense the attention of your spirit slayer focus upon|Your (?:<.*?>)?raging sandstorm(?:<.*?>)? swirls around|^Your senses tingle, then become awash in a flood of power as the life leaves your hapless foe!|^The flames surrounding <pushBold\\/>an? <a exist=\"(?:\#{immolated.join('|')})\" noun=\".*?\">.*?<\\/a><popBold\\/> flare up violently\\.\\.\\.|^<pushBold\\/>An? <a exist=\"(?:\#{pestilenced.join('|')})\" noun=\".*?\">.*?<\\/a><popBold\\/> (?:.*? as virulent green mist passes through|convulses with a crippling affliction|skin necrotizes and falls away as an indiscernible mass|skin hardens into a black rot and begins to crumble causing)|^(?:The sickly green miasma around|Light and dark pockmarks appear on|A spiritual malady wracks|Pustules break out all over|Pus-filled sores erupt on|Painful, pus-filled bumps begin to appear on) <pushBold\\/>an? <a exist=\"(?:\#{pestilenced.join('|')})\" noun=\".*?\">.*?<\\/a><popBold\\/> (?:flares|causing)|A .*? leaps from a <a.*?>.*?<\\/a> <pushBold\\/>.*?<a exist=\"(?:\#{weapon_fired.join('|')})\".*?>.*?<\\/a><popBold\\/> is wielding\\.|(?:Brilliant flashes of lightning surround|Large hailstones pound relentlessly on|Violent winds tighten around|Large rocks swirl around) <pushBold\\/>.*?<a exist=\"(?:\#{maelstromed.join('|')})\" noun=\".*?\">.*?<\\/a><popBold\\/>\\.|Suddenly a lightning bolt explodes from the small thundercloud and strikes <pushBold\\/>.*?<a exist=\"(?:\#{lightning_called.join('|')})\" noun=\".*?\">.*?<\\/a><popBold\\/> with a brilliant flash!|^Holy water continues to burn away at .*?exist=\"(?:\#{holy_bolted.join('|')})\"|^Acid continues to eat away at .*?<a exist=\"(\#{acid_covered.join('|')})\"|A shimmering field of energy flashes around you, reflecting the magic/) or (divine_wrath_active and divine_wrath_message[deity] and line =~ divine_wrath_message[deity])
+#      elsif line =~ /<comp(?:onent|Def) id='room objs'>.*?<a exist=\"(?:\#{$loot_arrow_ids.join('|')})\".*?<\\/comp(?:onent|Def)>/
+#         $loot_grab_list = ($loot_grab_list | GameObj.loot.to_a.find_all { |obj| $loot_arrow_ids.include?(obj.id) }.collect { |obj| obj.id }) - $loot_arrow_wait
+#      elsif line =~ /^(?:The|Glancing shot.  The|Bad angle.  The|Lacking the force and angle to lodge in .*?, the) <a exist=\"(\\-?[0-9]+)\" noun=\"arrow\">.*?<\\/a> (?:ricochets away from .*?, landing nearby\\.|zips past its target to the ground\\.|flips over, landing behind .*?\\.|fails to stick in .*?\\.|simply falls\\.|is deflected to one side, sailing to the ground\\.|disappears into the local environs|zips past its target to the ground\\.)/
+#         arrow_id = $1.dup
+#         if $loot_arrow_ids.include?(arrow_id) and not $loot_arrow_wait.include?(arrow_id)
+#            $loot_arrow_wait.push(arrow_id)
+#            Thread.new {
+#               sleep 16
+#               arrow_id = $loot_arrow_wait.shift
+#               unless $loot_grab_list.include?(arrow_id) or !GameObj.loot.any? { |obj| obj.id == arrow_id }
+#                  $loot_grab_list.push(arrow_id)
+#               end
+#            }
+#            if (line =~ /disappears into the local environs/) and (room = Room.current)
+#               $loot_search_rooms.push(room.id)
+#            end
+#         end
+elsif (line =~ /You (?:swing|gesture|sing|weave another verse|continue to sing|channel|take aim and fire|fire|wave|tap|rub|hurl|thrust|slash|throw|punch|attempt to punch|attempt to kick|attempt to throw|quickly dart behind .*? and try to hamstring|mentally attempt to locate your implanted essence|rush forward|exhale a virulent green mist)|You .*?attempt to (?:kick|punch|jab|grapple)|A wave of power flows out of you and toward|Abruptly, you sense the attention of your spirit slayer focus upon|Your (?:<.*?>)?raging sandstorm(?:<.*?>)? swirls around|^Your senses tingle, then become awash in a flood of power as the life leaves your hapless foe!|^The flames surrounding <pushBold\\/>an? <a exist=\"(?:\#{immolated.join('|')})\" noun=\".*?\">.*?<\\/a><popBold\\/> flare up violently\\.\\.\\.|^<pushBold\\/>An? <a exist=\"(?:\#{pestilenced.join('|')})\" noun=\".*?\">.*?<\\/a><popBold\\/> (?:.*? as virulent green mist passes through|convulses with a crippling affliction|skin necrotizes and falls away as an indiscernible mass|skin hardens into a black rot and begins to crumble causing)|^(?:The sickly green miasma around|Light and dark pockmarks appear on|A spiritual malady wracks|Pustules break out all over|Pus-filled sores erupt on|Painful, pus-filled bumps begin to appear on) <pushBold\\/>an? <a exist=\"(?:\#{pestilenced.join('|')})\" noun=\".*?\">.*?<\\/a><popBold\\/> (?:flares|causing)|A .*? leaps from a <a.*?>.*?<\\/a> <pushBold\\/>.*?<a exist=\"(?:\#{weapon_fired.join('|')})\".*?>.*?<\\/a><popBold\\/> is wielding\\.|(?:Brilliant flashes of lightning surround|Large hailstones pound relentlessly on|Violent winds tighten around|Large rocks swirl around) <pushBold\\/>.*?<a exist=\"(?:\#{maelstromed.join('|')})\" noun=\".*?\">.*?<\\/a><popBold\\/>\\.|Suddenly a lightning bolt explodes from the small thundercloud and strikes <pushBold\\/>.*?<a exist=\"(?:\#{lightning_called.join('|')})\" noun=\".*?\">.*?<\\/a><popBold\\/> with a brilliant flash!|^Holy water continues to burn away at .*?exist=\"(?:\#{holy_bolted.join('|')})\"|^Acid continues to eat away at .*?<a exist=\"(\#{acid_covered.join('|')})\"|A shimmering field of energy flashes around you, reflecting the magic/) or (divine_wrath_active and divine_wrath_message[deity] and line =~ divine_wrath_message[deity])
          next if line =~ /You gesture sharply/
          candidates = Array.new
          possible_holy_bolted = nil
